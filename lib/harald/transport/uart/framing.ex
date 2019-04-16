@@ -32,7 +32,78 @@ defmodule Harald.Transport.UART.Framing do
   def frame_timeout(state), do: {:ok, [state], <<>>}
 
   @impl Framing
-  def remove_framing(new_data, state), do: process_data(new_data, state)
+  def remove_framing(new_data, state) do
+    require Logger
+
+    case new_data do
+      # read bd addr
+      <<4, 14, 10, 1, 9, 16, status, bd_addr::binary>> ->
+        Logger.warn("ret read bd addr: #{inspect(%{status: status, bd_addr: bd_addr})}")
+
+      # vendor specific - get system status
+      <<
+        4,
+        14,
+        29,
+        1,
+        31,
+        254,
+        status,
+        software_version_x,
+        software_version_z,
+        chip_revision,
+        chip_mode,
+        fref::little-size(16),
+        slow_clock_used,
+        process_type_detected,
+        odp_process,
+        deep_sleep_mode,
+        whitening_mode,
+        cdc_mode,
+        self_test,
+        hopping_mode,
+        baud_rate::little-size(32),
+        temperature_index,
+        temperature_detected,
+        i2c_status,
+        fref_tcxo_clock::little-size(16),
+        reserved1,
+        reserved2
+      >> ->
+        Logger.warn(
+          "ret get system status: #{
+            inspect(%{
+              status: status,
+              software_version_x: software_version_x,
+              software_version_z: software_version_z,
+              chip_revision: chip_revision,
+              chip_mode: chip_mode,
+              fref: fref,
+              slow_clock_used: slow_clock_used,
+              process_type_detected: process_type_detected,
+              odp_process: odp_process,
+              deep_sleep_mode: deep_sleep_mode,
+              whitening_mode: whitening_mode,
+              cdc_mode: cdc_mode,
+              self_test: self_test,
+              hopping_mode: hopping_mode,
+              baud_rate: baud_rate,
+              temperature_index: temperature_index,
+              temperature_detected: temperature_detected,
+              i2c_status: i2c_status,
+              fref_tcxo_clock: fref_tcxo_clock,
+              reserved1: reserved1,
+              reserved2: reserved2
+            })
+          }"
+        )
+
+      _ ->
+        Logger.warn("ret: #{inspect(new_data)}")
+    end
+
+    process_data(new_data, state)
+  end
 
   @doc """
   Returns a tuple like `{remaining_desired_length, part_of_bin, rest_of_bin}`.

@@ -39,7 +39,7 @@ defmodule Harald.Transport.UART do
 
   @impl GenServer
   def handle_call({:send_command, message}, _from, %{uart_pid: uart_pid} = state) do
-    {:reply, UART.write(uart_pid, <<1>> <> message), state}
+    {:reply, UART.write(uart_pid, message), state}
   end
 
   @impl GenServer

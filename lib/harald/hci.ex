@@ -59,7 +59,7 @@ defmodule Harald.HCI do
 
   def command(opcode, opts) do
     s = byte_size(opts)
-    opcode <> <<s::size(8)>> <> opts
+    <<1>> <> opcode <> <<s::size(8)>> <> opts
   end
 
   @doc """
