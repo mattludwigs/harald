@@ -1,8 +1,8 @@
 defmodule Harald.ManufacturerData.AppleTest do
   use ExUnit.Case, async: true
   use ExUnitProperties
-  alias Harald.Generators.ManufacturerData.Apple, as: AppleGen
-  alias Harald.ManufacturerData.Apple
+  alias Harald.Generators.DataType.ManufacturerData.Apple, as: AppleGen
+  alias Harald.DataType.ManufacturerData.Apple
 
   doctest Apple, import: true
 

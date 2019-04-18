@@ -2,7 +2,7 @@ defmodule Harald.HCITest do
   use ExUnit.Case, async: true
   use ExUnitProperties
   alias Harald.Generators.HCI, as: HCIGen
-  alias Harald.HCI
+  alias Harald.{HCI, HCI.Packet}
 
   doctest Harald.HCI, import: true
 
@@ -16,7 +16,7 @@ defmodule Harald.HCITest do
 
   test "command/1" do
     check all opcode <- StreamData.integer(0..65_535) do
-      assert <<^opcode::size(16), 0>> = HCI.command(<<opcode::size(16)>>)
+      assert <<1, ^opcode::size(16), 0>> = HCI.command(<<opcode::size(16)>>)
     end
   end
 
@@ -26,7 +26,7 @@ defmodule Harald.HCITest do
                 opts <- StreamData.binary(min_length: 1) do
         s = byte_size(opts)
 
-        assert <<opcode::size(16), s>> <> opts == HCI.command(<<opcode::size(16)>>, opts)
+        assert <<1, opcode::size(16), s>> <> opts == HCI.command(<<opcode::size(16)>>, opts)
       end
     end
 
@@ -37,7 +37,7 @@ defmodule Harald.HCITest do
         s = byte_size(opts) + 1
         bool_int = if bool_opt, do: 1, else: 0
 
-        assert <<opcode::size(16), s, bool_int>> <> opts ==
+        assert <<Packet.type(:command), opcode::size(16), s, bool_int>> <> opts ==
                  HCI.command(<<opcode::size(16)>>, [bool_opt, opts])
       end
     end

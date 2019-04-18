@@ -19,8 +19,8 @@ defmodule Harald.HCI.ControllerAndBaseband do
   > the BR/EDR Controller. See Section 6.23.
 
       iex> read_local_name()
-      <<20, 12, 0>>
+      <<1, 20, 12, 0>>
   """
-  @spec read_local_name :: HCI.command()
+  @spec read_local_name :: binary()
   def read_local_name, do: @ogf |> HCI.opcode(0x0014) |> HCI.command()
 end

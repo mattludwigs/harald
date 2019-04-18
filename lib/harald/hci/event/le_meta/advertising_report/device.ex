@@ -22,7 +22,7 @@ defmodule Harald.HCI.Event.LEMeta.AdvertisingReport.Device do
   """
 
   alias Harald.HCI.{ArrayedData, Event.LEMeta.AdvertisingReport.Device}
-  alias Harald.{ManufacturerData, Serializable, Transport.UART.Framing}
+  alias Harald.{DataType.ManufacturerData, Serializable, Transport.UART.Framing}
   require Harald.AssignedNumbers.GenericAccessProfile, as: GenericAccessProfile
 
   @enforce_keys [:event_type, :address_type, :address, :data, :rss]
@@ -325,17 +325,21 @@ defmodule Harald.HCI.Event.LEMeta.AdvertisingReport.Device do
   end
 
   def deserialize_ads(<<GenericAccessProfile.id("Service Data - 32-bit UUID"), bin::binary>>) do
-    <<
-      uuid::little-size(32),
-      data::binary
-    >> = bin
+    case bin do
+      <<
+        uuid::little-size(32),
+        data::binary
+      >> ->
+        service_data_32 = %{
+          uuid: uuid,
+          data: data
+        }
 
-    service_data_32 = %{
-      uuid: uuid,
-      data: data
-    }
+        {:ok, {"Service Data - 32-bit UUID", service_data_32}}
 
-    {:ok, {"Service Data - 32-bit UUID", service_data_32}}
+      _ ->
+        {:error, bin}
+    end
   end
 
   def deserialize_ads(<<type, bin::bits>>) when type in GenericAccessProfile.ids() do
