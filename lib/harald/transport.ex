@@ -60,8 +60,6 @@ defmodule Harald.Transport do
     |> GenServer.call({:call, bin})
   end
 
-  def name(namespace), do: String.to_atom("#{namespace}.#{__MODULE__}")
-
   @doc """
   The default handlers that Transport will start.
   """
@@ -84,6 +82,15 @@ defmodule Harald.Transport do
     {:noreply, %State{state | adapter_state: adapter_state}}
   end
 
+  @doc """
+  Adds `pid` to the `namespace` transport's handlers.
+  """
+  def add_handler(namespace, pid) do
+    namespace
+    |> name()
+    |> GenServer.call({:add_handler, pid})
+  end
+
   @impl GenServer
   def handle_info({:transport_adapter, msg}, %{handlers: handlers} = state) do
     _ =
@@ -104,6 +111,11 @@ defmodule Harald.Transport do
     {:reply, :ok, %State{state | adapter_state: adapter_state}}
   end
 
+  @impl GenServer
+  def handle_call({:add_handler, pid}, _from, state) do
+    {:reply, :ok, %State{state | handlers: [pid | state.handlers]}}
+  end
+
   defp notify_handlers({:ok, events}, handlers) when is_list(events) do
     for e <- events do
       for h <- handlers do
@@ -111,6 +123,8 @@ defmodule Harald.Transport do
       end
     end
   end
+
+  defp name(namespace), do: String.to_atom("#{namespace}.#{__MODULE__}")
 
   defp notify_handlers({:ok, event}, handlers), do: notify_handlers({:ok, [event]}, handlers)
 
