@@ -7,8 +7,9 @@ defmodule Harald.Transport do
   alias Harald.HCI
 
   @type adapter_state :: map
-
+  @type event :: struct() | binary()
   @type namespace :: atom
+  @type handler_msg :: {:bluetooth_event, event()}
 
   defmodule State do
     @moduledoc false
@@ -84,6 +85,8 @@ defmodule Harald.Transport do
 
   @doc """
   Adds `pid` to the `namespace` transport's handlers.
+
+  `pid` will receive messages like `t:handler_msg/0`.
   """
   def add_handler(namespace, pid) do
     namespace
@@ -116,6 +119,8 @@ defmodule Harald.Transport do
     {:reply, :ok, %State{state | handlers: [pid | state.handlers]}}
   end
 
+  defp name(namespace), do: String.to_atom("#{namespace}.#{__MODULE__}")
+
   defp notify_handlers({:ok, events}, handlers) when is_list(events) do
     for e <- events do
       for h <- handlers do
@@ -123,8 +128,6 @@ defmodule Harald.Transport do
       end
     end
   end
-
-  defp name(namespace), do: String.to_atom("#{namespace}.#{__MODULE__}")
 
   defp notify_handlers({:ok, event}, handlers), do: notify_handlers({:ok, [event]}, handlers)
 

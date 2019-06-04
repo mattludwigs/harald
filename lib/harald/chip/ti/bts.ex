@@ -48,7 +48,6 @@ defmodule Harald.Chip.TI.BTS do
          >>,
          actions
        ) do
-    debug(:send, data)
     reduce_actions(rest, [data | actions])
   end
 
@@ -56,12 +55,11 @@ defmodule Harald.Chip.TI.BTS do
          <<
            @action_wait_event::little-size(16),
            size::little-size(16),
-           data::binary-size(size),
+           _data::binary-size(size),
            rest::binary
          >>,
          actions
        ) do
-    debug(:wait, data)
     reduce_actions(rest, actions)
   end
 
@@ -69,12 +67,11 @@ defmodule Harald.Chip.TI.BTS do
          <<
            @action_serial::little-size(16),
            size::little-size(16),
-           data::binary-size(size),
+           _data::binary-size(size),
            rest::binary
          >>,
          actions
        ) do
-    debug(:serial, data)
     reduce_actions(rest, actions)
   end
 
@@ -87,7 +84,6 @@ defmodule Harald.Chip.TI.BTS do
          >>,
          actions
        ) do
-    debug(:delay, data)
     reduce_actions(rest, [data | actions])
   end
 
@@ -95,12 +91,11 @@ defmodule Harald.Chip.TI.BTS do
          <<
            @action_run_script::little-size(16),
            size::little-size(16),
-           data::binary-size(size),
+           _data::binary-size(size),
            rest::binary
          >>,
          actions
        ) do
-    debug(:run_script, data)
     reduce_actions(rest, actions)
   end
 
@@ -108,20 +103,11 @@ defmodule Harald.Chip.TI.BTS do
          <<
            @action_remarks::little-size(16),
            size::little-size(16),
-           data::binary-size(size),
+           _data::binary-size(size),
            rest::binary
          >>,
          actions
        ) do
-    debug(:remarks, data)
     reduce_actions(rest, actions)
-  end
-
-  defp debug(:remarks, bin) do
-    :ok = Logger.debug("remarks   " <> String.replace(bin, <<0>>, <<>>))
-  end
-
-  defp debug(label, bin) do
-    :ok = Logger.debug(String.pad_trailing("#{label}", 10, " ") <> inspect(bin))
   end
 end
