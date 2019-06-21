@@ -5,16 +5,26 @@ defmodule Harald.LE do
 
   use GenServer
   alias Harald.HCI.Event.{LEMeta, LEMeta.AdvertisingReport}
-  alias Harald.HCI.LEController
-  alias Harald.Transport
-  alias Harald.Transport.Handler
+  alias Harald.HCI.{ControllerAndBaseband, LEController}
+  alias Harald.{ErrorCode, Transport, Transport.Handler}
   require Logger
 
   @behaviour Handler
 
   defmodule State do
     @moduledoc false
-    defstruct devices: %{}
+    defstruct from: nil, devices: %{}
+  end
+
+  @doc """
+  HCI_Read_Local_Name
+
+  - `OGF` - `0x03`
+  - `OCF` - `0x0014`
+  """
+  @spec read_local_name(atom()) :: {:ok, String.t()}
+  def read_local_name(namespace) do
+    GenServer.call(name(namespace), {:read_local_name, namespace})
   end
 
   def scan(namespace, opts \\ []) do
@@ -46,6 +56,15 @@ defmodule Harald.LE do
     end
   end
 
+  def handle_call({:read_local_name, ns}, from, state) do
+    try do
+      :ok = Transport.call(ns, ControllerAndBaseband.read_local_name())
+      {:noreply, %{state | from: from}}
+    catch
+      :exit, {:timeout, _} -> {:reply, {:error, :timeout}, state}
+    end
+  end
+
   @impl GenServer
   def handle_info(
         {:bluetooth_event, %LEMeta{subevent: %AdvertisingReport{devices: devices}}},
@@ -59,8 +78,18 @@ defmodule Harald.LE do
     {:noreply, state}
   end
 
+  def handle_info(
+        {:bluetooth_event,
+         {:error, {:unhandled_event_code, <<14, 252, 1, 20, error_code, _::bits>>}}},
+        %{from: from} = state
+      )
+      when not is_nil(from) do
+    GenServer.reply(from, {:error, ErrorCode.name(error_code)})
+    {:noreply, %{state | from: nil}}
+  end
+
   # Let other bluetooth events fall through.
-  def handle_info({:bluetooth_event, _}, state) do
+  def handle_info({:bluetooth_event, event}, state) do
     {:noreply, state}
   end
 

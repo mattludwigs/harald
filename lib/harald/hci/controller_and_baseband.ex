@@ -1,6 +1,4 @@
 defmodule Harald.HCI.ControllerAndBaseband do
-  alias Harald.HCI
-
   @moduledoc """
   HCI commands for working with the controller and baseband.
 
@@ -11,6 +9,8 @@ defmodule Harald.HCI.ControllerAndBaseband do
   > the behavior of the local Controller.
   Bluetooth Spec v5
   """
+
+  alias Harald.HCI
 
   @ogf 0x03
 
