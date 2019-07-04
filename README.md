@@ -8,4 +8,6 @@ An Elixir Bluetooth Host library.
 
 Active early development, the [CHANGELOG](CHANGELOG.md) is your friend.
 
-[Documentation](https://hexdocs.pm/harald/readme.html).
+- [Documentation](https://hexdocs.pm/harald/readme.html).
+  - [Getting Started](https://hexdocs.pm/harald/getting_started.html)
+  - [Frequently Asked Questions](https://hexdocs.pm/harald/faq.html)
