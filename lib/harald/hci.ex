@@ -1,28 +1,29 @@
 defmodule Harald.HCI do
   @moduledoc """
-  > The HCI provides a uniform interface method of accessing a Bluetooth Controller’s
-  > capabilities.
-
-  Reference: Version 5.0, Vol. 2, Part E, 1
+  Functions for serializing and deserializing HCI binaries and their Elixir representations.
   """
 
-  alias Harald.{HCI.Event, Serializable}
+  alias Harald.Serializable
+  require Harald.Spec, as: Spec
 
   @behaviour Serializable
+
+  @type command :: binary()
+  @type event :: binary()
 
   @typedoc """
   OpCode Group Field.
 
   See `t:opcode/0`
   """
-  @type ogf :: 0..63
+  @type ogf :: non_neg_integer()
 
   @typedoc """
   OpCode Command Field.
 
   See `t:opcode/0`
   """
-  @type ocf :: 0..1023
+  @type ocf :: non_neg_integer()
 
   @typedoc """
   > Each command is assigned a 2 byte Opcode used to uniquely identify different types of
@@ -36,67 +37,17 @@ defmodule Harald.HCI do
   """
   @type opcode :: binary()
 
-  @type opt :: boolean() | binary()
+  @typedoc """
+  A two-tuple representation of an opcode.
+  """
+  @type opcode_tuple :: {ogf(), ocf()}
 
+  @type opt :: boolean() | binary()
   @type opts :: binary() | [opt()]
 
-  @type command :: <<_::8, _::_*8>>
+  def serialize({:boolean, 0}), do: false
 
-  @spec opcode(ogf(), ocf()) :: opcode()
-  def opcode(ogf, ocf) when ogf < 64 and ocf < 1024 do
-    <<opcode::size(16)>> = <<ogf::size(6), ocf::size(10)>>
-    <<opcode::little-size(16)>>
-  end
+  def serialize({:boolean, 1}), do: true
 
-  @spec command(opcode(), opts()) :: command()
-  def command(opcode, opts \\ "")
-
-  def command(opcode, [_ | _] = opts) do
-    opts_bin = for o <- opts, into: "", do: to_bin(o)
-
-    command(opcode, opts_bin)
-  end
-
-  def command(opcode, opts) do
-    s = byte_size(opts)
-    opcode <> <<s::size(8)>> <> opts
-  end
-
-  @doc """
-  Convert a value to a binary.
-
-      iex> to_bin(false)
-      <<0>>
-
-      iex> to_bin(true)
-      <<1>>
-
-      iex> to_bin(<<1, 2, 3>>)
-      <<1, 2, 3>>
-  """
-  @spec to_bin(boolean() | binary()) :: binary()
-  def to_bin(false), do: <<0>>
-
-  def to_bin(true), do: <<1>>
-
-  def to_bin(bin) when is_binary(bin), do: bin
-
-  @impl Serializable
-  for module <- Event.event_modules() do
-    def serialize(%unquote(module){} = event) do
-      {:ok, bin} = Event.serialize(event)
-      {:ok, <<Event.indicator(), bin::binary>>}
-    end
-  end
-
-  @impl Serializable
-  def deserialize(<<4, rest::binary>>) do
-    case Event.deserialize(rest) do
-      {:ok, _} = ret -> ret
-      {:error, bin} when is_binary(bin) -> {:error, <<4, bin::binary>>}
-      {:error, data} -> {:error, data}
-    end
-  end
-
-  def deserialize(bin), do: {:error, bin}
+  Spec.ast(:v5_1)
 end

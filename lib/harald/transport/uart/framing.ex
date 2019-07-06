@@ -1,8 +1,8 @@
 defmodule Harald.Transport.UART.Framing do
   @moduledoc """
-  A framer module that defines a frame as a HCI packet.
+  A callback module for `Circuits.UART.Framing`.
 
-  Reference: Version 5.0, Vol 2, Part E, 5.4
+  A frame is defined as a HCI packet.
   """
 
   alias Circuits.UART.Framing
@@ -32,7 +32,9 @@ defmodule Harald.Transport.UART.Framing do
   def frame_timeout(state), do: {:ok, [state], <<>>}
 
   @impl Framing
-  def remove_framing(new_data, state), do: process_data(new_data, state)
+  def remove_framing(new_data, state) do
+    process_data(new_data, state)
+  end
 
   @doc """
   Returns a tuple like `{remaining_desired_length, part_of_bin, rest_of_bin}`.
@@ -71,11 +73,16 @@ defmodule Harald.Transport.UART.Framing do
 
   # HCI ACL Data Packet
   defp process_data(
-         <<2, _::size(16), length::size(16)>> <> data,
+         <<2, handle::little-size(12), flags::size(4), length::little-size(16)>> <> data,
          %State{frame: <<>>} = state,
          messages
        ) do
-    process_data(data, length, state, messages)
+    process_data(
+      data,
+      length,
+      %{state | frame: <<2, handle::little-size(12), flags::size(4), length::little-size(16)>>},
+      messages
+    )
   end
 
   # HCI Synchronous Data Packet

@@ -1,49 +1,73 @@
 defmodule Harald.Transport.UART do
   @moduledoc """
-  > The objective of this HCI UART Transport Layer is to make it possible to use the Bluetooth HCI
-  > over a serial interface between two UARTs on the same PCB. The HCI UART Transport Layer
-  > assumes that the UART communication is free from line errors.
-
-  Reference: Version 5.0, Vol 4, Part A, 1
+  A UART transport.
   """
 
   use GenServer
-  alias Circuits.UART
   alias Harald.Transport.Adapter
   alias Harald.Transport.UART.Framing
 
+  @typedoc """
+  The `args` in `start_link/1`.
+  """
+  @type start_link_args :: %{
+          required(:namespace) => Harald.namespace(),
+          optional(:module) => module(),
+          optional(:parent_pid) => pid(),
+          optional(:uart_opts) => [Circuits.UART.uart_option()]
+        }
+
+  @type state :: %{adapter_pid: pid()}
+
   @behaviour Adapter
 
-  ## Adapter Behaviour
-
-  @doc """
-  Start the UART transport.
-  """
-  @impl Adapter
-  def setup(parent_pid, args) do
-    {:ok, pid} = GenServer.start_link(__MODULE__, Keyword.put(args, :parent_pid, parent_pid))
-    {:ok, %{adapter_pid: pid}}
+  @doc false
+  def name(namespace) when is_atom(namespace) do
+    String.to_atom("#{__MODULE__}.namespace.#{namespace}")
   end
 
   @impl Adapter
-  def send_command(command, %{adapter_pid: adapter_pid} = state) do
-    :ok = GenServer.call(adapter_pid, {:send_command, command})
+  @spec start_link(start_link_args()) :: {:ok, state()}
+  def start_link(args) do
+    args =
+      DeepMerge.deep_merge(
+        %{
+          module: Circuits.UART,
+          parent_pid: self(),
+          uart_opts: [active: true, framing: {Framing, []}]
+        },
+        args
+      )
+
+    case GenServer.start_link(__MODULE__, args, name: name(args.namespace)) do
+      {:ok, pid} -> {:ok, %{adapter_pid: pid}}
+      {:error, _} = err -> err
+    end
+  end
+
+  @impl Adapter
+  def stop(namespace) when is_atom(namespace) do
+    namespace
+    |> name
+    |> GenServer.stop()
+  end
+
+  @impl Adapter
+  def send_binary(bin, %{adapter_pid: adapter_pid} = state) do
+    :ok = GenServer.call(adapter_pid, {:send_binary, bin})
     {:ok, state}
   end
 
-  ## Server Callbacks
-
   @impl GenServer
-  def init(args) do
-    {:ok, pid} = UART.start_link()
-    uart_opts = Keyword.merge([active: true, framing: {Framing, []}], args[:uart_opts])
-    :ok = UART.open(pid, args[:device], uart_opts)
-    {:ok, %{uart_pid: pid, parent_pid: args[:parent_pid]}}
+  def init(%{device: _, module: module} = args) do
+    {:ok, pid} = module.start_link()
+    :ok = module.open(pid, args.device, args.uart_opts)
+    {:ok, %{module: module, parent_pid: args.parent_pid, uart_pid: pid}}
   end
 
   @impl GenServer
-  def handle_call({:send_command, message}, _from, %{uart_pid: uart_pid} = state) do
-    {:reply, UART.write(uart_pid, <<1>> <> message), state}
+  def handle_call({:send_binary, bin}, _from, state) do
+    {:reply, state.module.write(state.uart_pid, bin), state}
   end
 
   @impl GenServer
